@@ -1,0 +1,100 @@
+import cv2
+import mediapipe as mp
+import numpy as np
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
+
+Tk().withdraw()
+
+path = askopenfilename(
+    title="Select Image",
+    filetypes=[("Images", "*.jpg *.jpeg *.png")]
+)
+
+img = cv2.imread(path)
+
+mp_selfie = mp.solutions.selfie_segmentation
+segment = mp_selfie.SelfieSegmentation(model_selection=1)
+
+rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+result = segment.process(rgb)
+
+mask = result.segmentation_mask > 0.5
+
+white = np.ones_like(img) * 255
+green = np.zeros_like(img)
+green[:] = (0, 255, 0)
+
+white_bg = np.where(mask[:, :, None], img, white)
+green_bg = np.where(mask[:, :, None], img, green)
+
+mask_only = (
+    mask.astype(np.uint8) * 255
+)
+
+mask_only = cv2.cvtColor(
+    mask_only,
+    cv2.COLOR_GRAY2BGR
+)
+
+h, w = img.shape[:2]
+
+cv2.putText(
+    img,
+    "Original",
+    (10, 40),
+    cv2.FONT_HERSHEY_SIMPLEX,
+    1,
+    (0, 0, 255),
+    2
+)
+
+cv2.putText(
+    white_bg,
+    "White BG",
+    (10, 40),
+    cv2.FONT_HERSHEY_SIMPLEX,
+    1,
+    (0, 0, 255),
+    2
+)
+
+cv2.putText(
+    green_bg,
+    "Green BG",
+    (10, 40),
+    cv2.FONT_HERSHEY_SIMPLEX,
+    1,
+    (0, 0, 255),
+    2
+)
+
+cv2.putText(
+    mask_only,
+    "Mask Only",
+    (10, 40),
+    cv2.FONT_HERSHEY_SIMPLEX,
+    1,
+    (0, 0, 255),
+    2
+)
+
+top = np.hstack([img, white_bg])
+bottom = np.hstack([green_bg, mask_only])
+
+final = np.vstack([top, bottom])
+
+cv2.imwrite(
+    "mediapipe_output.jpg",
+    final
+)
+
+cv2.imshow(
+    "Output",
+    final
+)
+
+cv2.waitKey(0)
+
+cv2.destroyAllWindows()
