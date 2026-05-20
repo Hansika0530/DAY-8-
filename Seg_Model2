@@ -1,0 +1,108 @@
+import torch
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+from torchvision import models
+from torchvision import transforms
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
+
+Tk().withdraw()
+
+path = askopenfilename(
+    title="Select Image",
+    filetypes=[("Images","*.jpg *.png *.jpeg")]
+)
+
+img = cv2.imread(path)
+
+img_rgb = cv2.cvtColor(
+    img,
+    cv2.COLOR_BGR2RGB
+)
+
+model = models.segmentation.deeplabv3_resnet101(
+    pretrained=True
+)
+
+model.eval()
+
+transform = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.ToTensor()
+])
+
+input_tensor = transform(
+    img_rgb
+).unsqueeze(0)
+
+with torch.no_grad():
+
+    output = model(
+        input_tensor
+    )["out"][0]
+
+mask = output.argmax(0).byte().cpu().numpy()
+
+mask = (
+    mask > 0
+).astype(np.uint8)
+
+white = np.ones_like(
+    img_rgb
+) * 255
+
+green = np.zeros_like(
+    img_rgb
+)
+
+green[:] = [0,255,0]
+
+white_bg = np.where(
+    mask[:,:,None],
+    img_rgb,
+    white
+)
+
+green_bg = np.where(
+    mask[:,:,None],
+    img_rgb,
+    green
+)
+
+mask_img = mask * 255
+
+plt.figure(
+    figsize=(14,8)
+)
+
+plt.subplot(2,2,1)
+plt.imshow(img_rgb)
+plt.title("Original")
+plt.axis("off")
+
+plt.subplot(2,2,2)
+plt.imshow(white_bg)
+plt.title("White BG")
+plt.axis("off")
+
+plt.subplot(2,2,3)
+plt.imshow(green_bg)
+plt.title("Green BG")
+plt.axis("off")
+
+plt.subplot(2,2,4)
+plt.imshow(
+    mask_img,
+    cmap="gray"
+)
+plt.title("Mask")
+plt.axis("off")
+
+plt.tight_layout()
+
+plt.savefig(
+    "deeplabv3_output.png"
+)
+
+plt.show()
