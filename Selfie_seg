@@ -1,0 +1,26 @@
+import cv2
+import mediapipe as mp
+import numpy as np
+# Load image
+img = cv2.imread(r"C:\Users\Hansika\Downloads\Women.jpg")
+rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+# MediaPipe Segmentation
+with mp.solutions.selfie_segmentation.SelfieSegmentation(1) as seg:
+    result = seg.process(rgb)
+mask = result.segmentation_mask > 0.5
+green = np.zeros_like(img)
+green[:] = (0, 255, 0)
+output = np.where(mask[..., None], img, green)
+mask_img = cv2.cvtColor(
+    (mask.astype(np.uint8) * 255),
+    cv2.COLOR_GRAY2BGR
+)
+final = np.hstack([
+    cv2.resize(img, (300,300)),
+    cv2.resize(mask_img, (300,300)),
+    cv2.resize(output, (300,300))
+])
+cv2.imwrite("MediaPipe_Green_BG.jpg", final)
+cv2.imshow("MediaPipe Result", final)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
